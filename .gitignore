@@ -1,0 +1,7 @@
+venv
+__pycache__
+.idea
+Resources/BotUsers*
+Logs*
+Resources/Screenshots*
+geckodriver.log

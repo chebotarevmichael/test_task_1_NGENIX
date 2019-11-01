@@ -12,7 +12,7 @@ def get_random_unique_strings(numb_of_str) -> List[str]:
     i = 0
     while i < numb_of_str:
         # generate random str
-        rand_str = hashlib.md5(os.urandom(32)).hexdigest()
+        rand_str = get_random_str_value()
 
         # is string unique?
         if rand_str not in list_of_unique_strings:
@@ -20,3 +20,7 @@ def get_random_unique_strings(numb_of_str) -> List[str]:
             i += 1
 
     return list_of_unique_strings
+
+
+def get_random_str_value() -> str:
+    return hashlib.md5(os.urandom(32)).hexdigest()

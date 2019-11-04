@@ -6,6 +6,7 @@ from random import randint
 from zipfile import ZipFile
 from io import BytesIO
 import multiprocessing
+from time import time
 from multiprocessing import Process, Manager
 import Tools
 from ParsedXml import ParsedXml
@@ -15,6 +16,7 @@ _NUMB_OF_LOGIC_CORES = multiprocessing.cpu_count()
 _NUMB_OF_ZIP = 50
 _NUMB_OF_XML_PER_ZIP = 100
 _DIR_FOR_ZIP_FILES = '.\\RESULT\\zips'
+_DIR_FOR_CSV_FILES = '.\\RESULT'
 
 
 def process_unzipping(zip_files_names: List[str], result: Dict[str, Dict[str, ParsedXml]]):
@@ -44,8 +46,11 @@ def process_unzipping(zip_files_names: List[str], result: Dict[str, Dict[str, Pa
 
 
 def main():
+    ts_start = time()
     output_data: Dict[str, Dict[str, ParsedXml]] = {}
+
     lst_of_rand_str = Tools.get_random_unique_strings(_NUMB_OF_ZIP * _NUMB_OF_XML_PER_ZIP)
+    Tools.remove_all_files_in_dir(_DIR_FOR_ZIP_FILES)
 
     # Build data for all XML and ZIP files (it will be used for validating in assert)
     # loop of ZIP
@@ -72,7 +77,7 @@ def main():
 
         # loop of XML
         for xml_file_name in output_data[zip_file_name].keys():
-            xml_data: ParsedXml = output_data[zip_file_name][xml_file_name]
+            xml_files_data: ParsedXml = output_data[zip_file_name][xml_file_name]
 
             # make XML data for 1 file
             # <root>
@@ -81,18 +86,18 @@ def main():
             # -<var name=’id’ value=’<random_unique_string_value>’/>
             var_1 = ET.SubElement(root, 'var')
             var_1.set('name', 'id')                         # add attribute "name"
-            var_1.set('value', xml_data.id_)                # add attribute "value"
+            var_1.set('value', xml_files_data.id_)                # add attribute "value"
 
             # -<var name=’id’ value=’<random_unique_string_value>’/>
             var_2 = ET.SubElement(root, 'var')
             var_2.set('name', 'level')                      # add attribute "name"
-            var_2.set('value', xml_data.level)              # add attribute "value"
+            var_2.set('value', xml_files_data.level)              # add attribute "value"
 
             # -<objects>
             objects = ET.SubElement(root, 'objects')
 
             # --<object name=’<random_string_value>’/>
-            for object_name in xml_data.objects_names:
+            for object_name in xml_files_data.objects_names:
                 obj = ET.SubElement(objects, 'object')
                 obj.set('name', object_name)
             # Completed
@@ -113,8 +118,8 @@ def main():
     #
     # Part 2. Reading XML form ZIP files and writing to CSV
     # Important! native Pool is not work on PyCharm IDE therefore Process() is used instead Pool().
-    input_data = Manager().dict()                               # shared memory (dictionary)
-    processes = []                                              # "pool" of process;
+    input_data: Dict[str, Dict[str, ParsedXml]] = Manager().dict()  # shared memory (dictionary)
+    processes = []                                                  # "pool" of process;
 
     # preparing sub-tasks for each process
     names_of_zips = os.listdir(_DIR_FOR_ZIP_FILES)
@@ -137,11 +142,15 @@ def main():
                                                       f'\noutput: {output_data}' \
                                                       f'\ninput: {input_data}'
 
-    # TODO: add CSV
-    print(len(input_data))
-
-    pass
-
+    # write to CSV
+    xml_files_data: List[ParsedXml] = [xml_file_data for xml_dict in input_data.values()
+                                       for xml_file_data in xml_dict.values()]
+    Tools.write_data_to_csv_file(path_csv=f'{_DIR_FOR_CSV_FILES}\\id_and_level.csv',
+                                 data=[(xml_file_data.id_, xml_file_data.level) for xml_file_data in xml_files_data])
+    Tools.write_data_to_csv_file(path_csv=f'{_DIR_FOR_CSV_FILES}\\id_and_object_name.csv',
+                                 data=[(xml_file_data.id_, obj_name) for xml_file_data in xml_files_data
+                                       for obj_name in xml_file_data.objects_names])
+    print(f'Finished after {round(time() - ts_start, 2)} sec.')
 
 if __name__ == '__main__':
     # TODO: add priority of process
